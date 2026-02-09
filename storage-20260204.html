@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="60"> 
+    <title>Disk Usage DashBoard</title>
+    <script src="{{ url_for('static', path='echarts.min.js') }}"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 10px; margin: 0; }
+        h3 { color: #2c3e50; margin: 5px; font-size: 1.1em; border-left: 4px solid #3498db; padding-left: 8px; }
+
+        /* Requirement: 12 columns grid setup */
+        .dashboard-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(8%, 1fr)); 
+            gap: 5px; 
+            margin-bottom: 20px; 
+        }
+
+        .chart-card { 
+            background: white; 
+            padding: 5px; 
+            border-radius: 4px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+            text-align: center; 
+        }
+        
+        /* Ultra-compact chart height */
+        .chart-container { width: 100%; height: 120px; }
+        
+        /* Smaller text for 12-column layout */
+        .host-label { 
+            font-size: 0.8em; 
+            font-weight: bold; 
+            color: #2c3e50;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; 
+            display: block;
+        }
+        
+        .mount-label { font-size: 0.6em; color: #95a5a6; display: block; margin-bottom: 2px; }
+
+        .table-container { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background: #34495e; color: white; }
+    </style>
+</head>
+<body>
+
+    <h3>📊 Disk Overview (12 Cols)</h3>
+    <div class="dashboard-grid">
+        {% for d in charts_devices %}
+        <div class="chart-card">
+            <span class="host-label" title="{{ d.hostname }}">{{ d.hostname }}</span>
+            <span class="mount-label"><code>{{ d.mountpoint }}</code></span>
+            <div id="chart-{{ loop.index }}" class="chart-container"></div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="table-container">
+        <h3>📝 Detailed List (Sorted by Usage)</h3>
+        <input type="text" id="hostSearch" class="search-box" placeholder="🔍 Search..." onkeyup="filterTable()">
+        <table id="usageTable">
+            <thead>
+                <tr>
+                    <th>Instance</th>
+                    <th>Platform</th>
+                    <th>Mount Point</th>
+                    <th>Usage (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in table_devices %}
+                <tr>
+                    <td><b>{{ d.hostname }}</b></td>
+                    <td>{{ d.platform }}</td>
+                    <td><code>{{ d.mountpoint }}</code></td>
+                    <td style="font-weight: bold; color: {{ '#e74c3c' if d.usage >= n_percent else '#2c3e50' }};">
+                        {{ d.usage }}%
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function filterTable() {
+            var input = document.getElementById("hostSearch");
+            var filter = input.value.toUpperCase();
+            var tr = document.getElementById("usageTable").getElementsByTagName("tr");
+            for (var i = 1; i < tr.length; i++) {
+                tr[i].style.display = tr[i].innerText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
+        }
+
+        {% for d in charts_devices %}
+        (function() {
+            var myChart = echarts.init(document.getElementById('chart-{{ loop.index }}'));
+            var usageColor = '#2ecc71'; 
+            if ({{ d.usage }} >= {{ n_percent }}) usageColor = '#e74c3c'; 
+            else if ({{ d.usage }} >= 80) usageColor = '#f1c40f'; 
+
+            myChart.setOption({
+                series: [{
+                    type: 'pie',
+                    radius: ['60%', '90%'], // Thinner donut for small size
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 2, borderColor: '#fff', borderWidth: 1 },
+                    label: {
+                        show: true, position: 'center',
+                        formatter: '{{ d.usage }}%', 
+                        fontSize: '12', // Small font for 12-column mode
+                        fontWeight: 'bold'
+                    },
+                    data: [
+                        { value: {{ d.usage }}, itemStyle: { color: usageColor } },
+                        { value: {{ (100 - d.usage)|round(1) }}, itemStyle: { color: '#f1f5f9' } }
+                    ]
+                }]
+            });
+            window.addEventListener('resize', function() { myChart.resize(); });
+        })();
+        {% endfor %}
+    </script>
+</body>
+</html>

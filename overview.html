@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="30">
+    <title>Server Overview Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        .navbar { background-color: #2c3e50; padding: 10px 20px; display: flex; gap: 10px; }
+        .nav-item { color: #ecf0f1; text-decoration: none; font-size: 0.85em; padding: 8px 15px; border-radius: 4px; }
+        .nav-item.active { background-color: #27ae60; font-weight: bold; }
+        
+        .content { padding: 15px; }
+        .section-title { 
+            font-size: 1.2em; font-weight: bold; margin: 25px 0 10px 0; padding-left: 10px;
+            border-left: 5px solid #333; 
+        }
+        .section-linux { border-left-color: #3498db; color: #2980b9; }
+        .section-windows { border-left-color: #0078d4; color: #005a9e; }
+
+        /* Force 8 Columns Grid */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(8, 1fr); 
+            gap: 10px; 
+            width: 100%;
+        }
+
+        .host-card { 
+            background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            border-top: 4px solid #bdc3c7; overflow: visible; display: flex; flex-direction: column;
+        }
+        .host-card.Linux { border-top-color: #3498db; }
+        .host-card.Windows { border-top-color: #0078d4; }
+        
+        /* High Contrast Header for IP/Hostname */
+        .host-header {
+            background-color: #34495e; /* Dark header for contrast */
+            padding: 5px 2px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+        .host-name { 
+            font-size: 0.85em; font-weight: bold; color: #ffffff !important; /* Force white text */
+            display: block;
+            word-break: break-all; /* Ensure IP/Name wraps if too long */
+            min-height: 1.2em;
+        }
+
+        .card-body { padding: 8px; }
+        .status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+        .status-label { font-size: 0.7em; color: #666; font-weight: bold; }
+        
+        /* Lights */
+        .light-box { display: flex; align-items: center; gap: 4px; }
+        .light { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .green { background-color: #2ecc71; }
+        .yellow { background-color: #f1c40f; }
+        .red { background-color: #e74c3c; box-shadow: 0 0 5px #e74c3c; }
+        
+        .usage-text { font-size: 0.8em; font-weight: 700; width: 35px; text-align: right; }
+        
+        .disk-section { margin-top: 5px; padding-top: 5px; border-top: 1px dashed #ccc; }
+        .disk-item { font-size: 0.7em; display: flex; justify-content: space-between; margin-bottom: 3px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/overview" class="nav-item active">Overview</a>
+        <a href="/storage" class="nav-item">Linux Disk</a>
+        <a href="/windows-storage" class="nav-item">Windows Disk</a>
+        <a href="/linux-cpu" class="nav-item">Linux CPU</a>
+        <a href="/windows-cpu" class="nav-item">Windows CPU</a>
+        <a href="/linux-mem" class="nav-item">Linux Memory</a>
+        <a href="/windows-mem" class="nav-item">Windows Memory</a>
+    </nav>
+
+    <div class="content">
+        <div class="section-title section-linux">LINUX INFRASTRUCTURE</div>
+        <div class="grid">
+            {% for h in hosts if h.os == 'Linux' %}
+            <div class="host-card Linux">
+                <div class="host-header">
+                    <span class="host-name">{{ h.hostname }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="status-row">
+                        <span class="status-label">CPU</span>
+                        <div class="light-box">
+                            <span class="usage-text">{{ h.cpu.usage }}%</span>
+                            <span class="light {{ h.cpu.status }}"></span>
+                        </div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">MEM</span>
+                        <div class="light-box">
+                            <span class="usage-text">{{ h.mem.usage }}%</span>
+                            <span class="light {{ h.mem.status }}"></span>
+                        </div>
+                    </div>
+                    <div class="disk-section">
+                        {% for d in h.disk %}
+                        <div class="disk-item">
+                            <span style="color:#777; overflow:hidden;">{{ d.label }}</span>
+                            <div class="light-box">
+                                <span style="font-weight:600;">{{ d.usage }}%</span>
+                                <span class="light {{ d.status }}" style="width:7px; height:7px;"></span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="section-title section-windows">WINDOWS INFRASTRUCTURE</div>
+        <div class="grid">
+            {% for h in hosts if h.os == 'Windows' %}
+            <div class="host-card Windows">
+                <div class="host-header">
+                    <span class="host-name">{{ h.hostname }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="status-row">
+                        <span class="status-label">CPU</span>
+                        <div class="light-box">
+                            <span class="usage-text">{{ h.cpu.usage }}%</span>
+                            <span class="light {{ h.cpu.status }}"></span>
+                        </div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">MEM</span>
+                        <div class="light-box">
+                            <span class="usage-text">{{ h.mem.usage }}%</span>
+                            <span class="light {{ h.mem.status }}"></span>
+                        </div>
+                    </div>
+                    <div class="disk-section">
+                        {% for d in h.disk %}
+                        <div class="disk-item">
+                            <span style="color:#777;">{{ d.label }}</span>
+                            <div class="light-box">
+                                <span style="font-weight:600;">{{ d.usage }}%</span>
+                                <span class="light {{ d.status }}" style="width:7px; height:7px;"></span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
